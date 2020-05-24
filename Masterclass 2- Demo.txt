@@ -1,0 +1,280 @@
+POD creation
+============
+
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: aws-pod
+  labels:
+    name: web
+spec:
+  containers:
+  - name: nginx
+    image: nginx:latest
+    ports:
+    - containerPort: 80  
+EOF
+
+$ cat <<EOF | kubectl apply -f -
+> apiVersion: v1
+> kind: Pod
+> metadata:
+>   name: aws-pod
+>   labels:
+>     name: web
+> spec:
+>   containers:
+>   - name: nginx
+>     image: nginx:latest
+>     ports:
+>     - containerPort: 80
+> EOF
+pod/aws-pod created
+
+Get POD status
+==============
+
+$ kubectl get pod
+NAME      READY   STATUS              RESTARTS   AGE
+aws-pod   0/1     ContainerCreating   0          9s
+
+$ kubectl get pod -w
+NAME      READY   STATUS    RESTARTS   AGE
+aws-pod   1/1     Running   0          15s
+
+$ kubectl get pod -o wide
+NAME      READY   STATUS    RESTARTS   AGE     IP           NODE       NOMINATED NODE   READINESS GATES
+aws-pod   1/1     Running   0          2m11s   172.18.0.4   minikube   <none>           <none>
+
+Run application
+===============
+
+$ curl 172.18.0.4:80
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+    body {
+        width: 35em;
+        margin: 0 auto;
+        font-family: Tahoma, Verdana, Arial, sans-serif;
+    }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+
+
+Logging inside POD
+==================
+
+$ kubectl exec -it aws-pod /bin/bash
+root@aws-pod:/# echo Hello all > /usr/share/nginx/html/index.html
+root@aws-pod:/# exit
+exit
+
+$ curl 172.18.0.4:80
+Hello all
+$
+
+Creating replicaset
+=================
+
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: aws-replicaset
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+EOF
+
+
+$ kubectl get replicaset
+NAME             DESIRED   CURRENT   READY   AGE
+aws-replicaset   2         2         2       32s
+$ kubectl get rs
+NAME             DESIRED   CURRENT   READY   AGE
+aws-replicaset   2         2         2       38s
+$ kubectl get rs -o wide
+NAME             DESIRED   CURRENT   READY   AGE   CONTAINERS   IMAGES         SELECTOR
+aws-replicaset   2         2         2       44s   nginx        nginx:latest   app=web
+$ kubectl get pod
+NAME                   READY   STATUS    RESTARTS   AGE
+aws-replicaset-6mwfq   1/1     Running   0          65s
+aws-replicaset-9vzrl   1/1     Running   0          65s
+
+$ kubectl delete pod aws-replicaset-6mwfq
+pod "aws-replicaset-6mwfq" deleted
+
+$ kubectl get pod
+NAME                   READY   STATUS    RESTARTS   AGE
+aws-replicaset-9vzrl   1/1     Running   0          2m52s
+aws-replicaset-jx2s7   1/1     Running   0          12s
+
+Scale up
+=========
+
+$ kubectl scale rs aws-replicaset --replicas=5
+replicaset.apps/aws-replicaset scaled
+$
+$ kubectl get pod
+NAME                   READY   STATUS              RESTARTS   AGE
+aws-replicaset-9vzrl   1/1     Running             0          14m
+aws-replicaset-hlflc   0/1     ContainerCreating   0          4s
+aws-replicaset-jx2s7   1/1     Running             0          12m
+aws-replicaset-n8cgz   0/1     ContainerCreating   0          4s
+aws-replicaset-n927s   0/1     ContainerCreating   0          4s
+$
+
+$ kubectl get pod
+NAME                   READY   STATUS    RESTARTS   AGE
+aws-replicaset-9vzrl   1/1     Running   0          15m
+aws-replicaset-hlflc   1/1     Running   0          41s
+aws-replicaset-jx2s7   1/1     Running   0          12m
+aws-replicaset-n8cgz   1/1     Running   0          41s
+aws-replicaset-n927s   1/1     Running   0          41s
+
+Scale down
+==========
+
+$ kubectl scale rs aws-replicaset --replicas=1
+replicaset.apps/aws-replicaset scaled
+$ kubectl get pod
+NAME                   READY   STATUS        RESTARTS   AGE
+aws-replicaset-9vzrl   1/1     Running       0          15m
+aws-replicaset-hlflc   0/1     Terminating   0          50s
+aws-replicaset-jx2s7   0/1     Terminating   0          12m
+aws-replicaset-n8cgz   0/1     Terminating   0          50s
+aws-replicaset-n927s   0/1     Terminating   0          50s
+
+$ kubectl get pod
+NAME                   READY   STATUS    RESTARTS   AGE
+aws-replicaset-9vzrl   1/1     Running   0          16m
+
+
+Creating deployment
+===================
+
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aws-deployment
+  labels:
+    app: web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+EOF
+
+
+$ kubectl get deployment
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+aws-deployment   2/2     2            2           8s
+
+$ kubectl get pod
+NAME                             READY   STATUS    RESTARTS   AGE
+aws-deployment-79cfcb457-7x2vx   1/1     Running   0          14s
+aws-deployment-79cfcb457-vzntl   1/1     Running   0          14s
+
+$ kubectl get replicaset
+NAME                       DESIRED   CURRENT   READY   AGE
+aws-deployment-79cfcb457   2         2         2       70s
+$
+
+Check if app is running on both nodes
+=====================================
+$ kubectl get pod -o wide
+NAME                             READY   STATUS    RESTARTS   AGE     IP           NODE       NOMINATED NODE  READINESS GATES
+aws-deployment-79cfcb457-dcgrf   1/1     Running   0          6m19s   172.18.0.5   minikube   <none>  <none>
+aws-deployment-79cfcb457-vzntl   1/1     Running   0          9m10s   172.18.0.4   minikube   <none>  <none>
+$ curl 172.18.0.5:80
+$ curl 172.18.0.4:80
+
+
+Self healing 
+============
+
+$ kubectl delete pod aws-deployment-79cfcb457-7x2vx
+pod "aws-deployment-79cfcb457-7x2vx" deleted
+$ kubectl get pod
+NAME                             READY   STATUS              RESTARTS   AGE
+aws-deployment-79cfcb457-dcgrf   0/1     ContainerCreating   0          13s
+aws-deployment-79cfcb457-vzntl   1/1     Running             0          3m4s
+$ kubectl get pod
+NAME                             READY   STATUS    RESTARTS   AGE
+aws-deployment-79cfcb457-dcgrf   1/1     Running   0          23s
+aws-deployment-79cfcb457-vzntl   1/1     Running   0          3m14s
+$
+
+
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: aws-pod
+  labels:
+    app: web
+spec:
+  containers:
+  - name: web
+    image: nginx:latest
+    ports:
+    - containerPort: 3000
+    envFrom:
+     - configMapRef:
+         name: web-configmap  
+    volumeMounts:
+    - name: webconfigmap-vol
+      mountPath: "/web-config"
+      readOnly: true
+  volumes:
+  - name: webconfigmap-vol
+    configMap:
+      name: web-configmap
+EOF
+
+
+
+
+

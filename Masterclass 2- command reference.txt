@@ -1,0 +1,90 @@
+2 ways to run commands
+
+Imperative
+kubectl run nginx
+
+Declarative
+kubectl create -f pod_definition.yaml
+
+kubectl
+
+Getting cluster node information
+================================
+
+kubectl cluster-info
+kubectl get nodes
+
+Getting IP of cluster nodes
+================================
+kubectl get nodes -o wide
+
+minikube commands
+=================
+
+minikube version
+
+minikube start
+
+Getting all objects info
+=========================
+
+kubectl get all --all-namespaces
+
+POD
+=========
+
+kubectl apply -f create_pod.yaml
+
+kubectl run 
+
+kubectl get pod/pods/po
+
+kubectl get pod -n <namespace-name>
+
+kubectl get pod -all-namespaces
+
+kubectl get pod -w
+
+kubectl get pod -o wide
+
+kubectl describe pod <pod-name> 
+
+kubectl describe pod <pod-name> -o yaml/json > pod_definition.yaml
+
+kubectl logs -f <pod-name>
+kubectl logs <pod-name> -c <containername>
+
+kubectl exec -it <pod-name> exec -it /bin/bash -n <namespace>
+kubectl exec -it /bin/bash <pod-name> -c <containername> -n <namespace> 
+
+
+kubectl edit pod <pod-name>
+
+kubectl delete pod <pod-name>
+
+
+Replicaset
+=========
+
+kubectl apply -f create_replicaset.yaml
+
+kubectl get rs
+
+kubectl delete pod <pod-name> to see impact of pod deletion
+
+kubectl scale --replicas=5 -f create_replicaset.yaml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
